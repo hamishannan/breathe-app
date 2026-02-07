@@ -1103,7 +1103,7 @@ export default function Home() {
 
             {/* Dynamic cue underneath */}
             <p style={{
-              fontSize: '14px',
+              fontSize: '13px',
               color: theme.textSecondary,
               margin: '0',
               textAlign: 'center',
@@ -1111,7 +1111,7 @@ export default function Home() {
               fontStyle: 'italic'
             }}>
               {wimHofBreathCount <= 10
-                ? 'Into the belly, into the chest, let it go'
+                ? 'Into the belly, into the chest'
                 : wimHofBreathCount <= 20
                   ? 'Fully in, let it all go'
                   : wimHofBreathCount > 25
@@ -1130,7 +1130,7 @@ export default function Home() {
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
-              Hold - tap when you need to breathe
+              Deep breaths - fully in, let go
             </p>
 
             <div style={{
@@ -1160,7 +1160,7 @@ export default function Home() {
                 transform: 'scale(0.6)'
               }}>
                 <div style={{ textAlign: 'center', color: 'white' }}>
-                  <div style={{ fontSize: '16px', fontWeight: '400', marginBottom: '4px', opacity: 0.9 }}>
+                  <div style={{ fontSize: '22px', fontWeight: '500', marginBottom: '4px' }}>
                     Hold
                   </div>
                   <div style={{ fontSize: '48px', fontWeight: '300' }}>
@@ -1170,8 +1170,15 @@ export default function Home() {
               </div>
             </div>
 
-            <p style={{ fontSize: '12px', color: theme.textMuted }}>
-              Target: {wimHofTargetHold}s
+            {/* Cue underneath bubble */}
+            <p style={{
+              fontSize: '13px',
+              color: theme.textSecondary,
+              margin: '0',
+              textAlign: 'center',
+              fontStyle: 'italic'
+            }}>
+              Target: {wimHofTargetHold}s • Tap when you need to breathe
             </p>
           </>
         )}
@@ -1185,7 +1192,7 @@ export default function Home() {
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
-              Deep breath in
+              Deep breaths - fully in, let go
             </p>
 
             <div style={{
@@ -1220,6 +1227,16 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Cue underneath bubble */}
+            <p style={{
+              fontSize: '13px',
+              color: theme.textSecondary,
+              margin: '0',
+              textAlign: 'center',
+              fontStyle: 'italic'
+            }}>
+              Deep recovery breath
+            </p>
           </>
         )}
 
@@ -1232,7 +1249,7 @@ export default function Home() {
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
-              Hold it in
+              Deep breaths - fully in, let go
             </p>
 
             <div style={{
@@ -1259,7 +1276,7 @@ export default function Home() {
                 transform: 'scale(1)'
               }}>
                 <div style={{ textAlign: 'center', color: 'white' }}>
-                  <div style={{ fontSize: '16px', fontWeight: '400', marginBottom: '4px', opacity: 0.9 }}>
+                  <div style={{ fontSize: '22px', fontWeight: '500', marginBottom: '4px' }}>
                     Hold
                   </div>
                   <div style={{ fontSize: '48px', fontWeight: '300' }}>
@@ -1269,12 +1286,31 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Cue underneath bubble */}
+            <p style={{
+              fontSize: '13px',
+              color: theme.textSecondary,
+              margin: '0',
+              textAlign: 'center',
+              fontStyle: 'italic'
+            }}>
+              Recovery hold: 15s
+            </p>
           </>
         )}
 
         {/* Recovery Exhale Phase - circle shrinks ready for next round */}
         {wimHofPhase === 'recoveryExhale' && (
           <>
+            <p style={{
+              fontSize: '14px',
+              color: theme.textMuted,
+              margin: '0 0 24px',
+              textAlign: 'center'
+            }}>
+              Deep breaths - fully in, let go
+            </p>
+
             <div style={{
               position: 'relative',
               width: 'min(340px, 75vw)',
