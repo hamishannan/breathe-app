@@ -3,18 +3,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // Stylised Breathe Logo Component
-const BreatheLogo = ({ size = 120 }) => (
+const BreatheLogo = ({ size = 120, darkMode = false }) => (
   <svg width={size} height={size * 0.5} viewBox="0 0 240 120" fill="none">
     {/* Flowing breath waves */}
     <defs>
       <linearGradient id="breathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#C4857A" stopOpacity="0.3" />
-        <stop offset="50%" stopColor="#9B8AAD" stopOpacity="0.5" />
-        <stop offset="100%" stopColor="#7C9885" stopOpacity="0.3" />
+        <stop offset="0%" stopColor="#C4857A" stopOpacity={darkMode ? "0.5" : "0.3"} />
+        <stop offset="50%" stopColor="#9B8AAD" stopOpacity={darkMode ? "0.7" : "0.5"} />
+        <stop offset="100%" stopColor="#7C9885" stopOpacity={darkMode ? "0.5" : "0.3"} />
       </linearGradient>
       <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#3d3a38" />
-        <stop offset="100%" stopColor="#5a5550" />
+        <stop offset="0%" stopColor={darkMode ? "#e8e8e8" : "#3d3a38"} />
+        <stop offset="100%" stopColor={darkMode ? "#c0c0c0" : "#5a5550"} />
       </linearGradient>
     </defs>
 
@@ -69,6 +69,7 @@ const breathingTechniques = {
   },
   relaxing: {
     name: 'Sleep & Calm',
+    displayName: '4-7-8',
     description: '4-7-8 technique by Dr. Weil',
     cue: 'Breathe in through your nose, out through your mouth making a whoosh sound',
     phases: [
@@ -80,12 +81,14 @@ const breathingTechniques = {
   },
   sigh: {
     name: 'Quick Calm',
-    description: 'Fastest way to calm down',
+    displayName: 'Physiological Sigh',
+    description: 'Physiological Sigh',
     cue: 'Double inhale through your nose',
     phases: [
       { name: 'Inhale', duration: 1.8 },
+      { name: 'Pause', duration: 0.3 },
       { name: 'Sip More', duration: 1 },
-      { name: 'Exhale', duration: 4 }
+      { name: 'Exhale', duration: 5 }
     ],
     color: '#C4857A'  // Terracotta rose - warm & soothing
   }
@@ -159,9 +162,25 @@ const BreathingGauge = ({ breathsPerMinute }) => {
   );
 };
 
-export default function BreathingExercise() {
+export default function Home() {
   const [selectedTechnique, setSelectedTechnique] = useState(null);
   const [isActive, setIsActive] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Theme colors based on mode
+  const theme = {
+    bg: darkMode
+      ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+      : 'linear-gradient(135deg, #faf7f5 0%, #f5ebe4 100%)',
+    cardBg: darkMode ? '#252540' : 'white',
+    text: darkMode ? '#e8e8e8' : '#3d3a38',
+    textSecondary: darkMode ? '#a0a0b0' : '#7a7067',
+    textMuted: darkMode ? '#808090' : '#a39a8f',
+    tagBg: darkMode ? '#353550' : '#f5efe8',
+    tagText: darkMode ? '#b0b0c0' : '#7a7067',
+    border: darkMode ? '#353550' : '#e5e0d8',
+    shadow: darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.04)',
+  };
   const [isPaused, setIsPaused] = useState(false);
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [phaseProgress, setPhaseProgress] = useState(0);
@@ -171,6 +190,11 @@ export default function BreathingExercise() {
 
   // 4-7-8 cycle target (4 = beginner, 8 = advanced)
   const [relaxingTargetCycles, setRelaxingTargetCycles] = useState(4);
+
+  // Quick Calm (Physiological Sigh) mode - 'cycles' (3 cycles) or 'timer' (5 min)
+  const [sighMode, setSighMode] = useState('cycles');
+  const SIGH_TARGET_CYCLES = 3;
+  const SIGH_TIMER_DURATION = 300; // 5 minutes in seconds
 
   // Anxiety mode state
   const [anxietyMode, setAnxietyMode] = useState(false);
@@ -223,6 +247,10 @@ export default function BreathingExercise() {
                 if (selectedTechnique === 'relaxing' && newCount >= relaxingTargetCycles) {
                   setTimeout(() => stopExercise(), 100);
                 }
+                // Quick Calm (sigh): auto-complete after 3 cycles if in cycles mode
+                if (selectedTechnique === 'sigh' && sighMode === 'cycles' && newCount >= SIGH_TARGET_CYCLES) {
+                  setTimeout(() => stopExercise(), 100);
+                }
                 return newCount;
               });
             }
@@ -233,7 +261,14 @@ export default function BreathingExercise() {
           return newProgress;
         });
 
-        setTotalSeconds(prev => prev + tickInterval / 1000);
+        setTotalSeconds(prev => {
+          const newTime = prev + tickInterval / 1000;
+          // Quick Calm timer mode: auto-complete after 5 minutes
+          if (selectedTechnique === 'sigh' && sighMode === 'timer' && newTime >= SIGH_TIMER_DURATION) {
+            setTimeout(() => stopExercise(), 100);
+          }
+          return newTime;
+        });
       }, tickInterval);
     }
 
@@ -562,6 +597,9 @@ export default function BreathingExercise() {
         return 0.6 + (0.2 * easeOut(progress));
       }
       return 0.6 + (0.4 * progress);
+    } else if (currentPhase.name === 'Pause') {
+      // Brief pause at 80% before sip more
+      return 0.8;
     } else if (currentPhase.name === 'Sip More') {
       // Gentle top-up from 80% to full (with slight overshoot to 105%)
       // This is the "filling the air sacs" part - smoother, gentler
@@ -591,7 +629,7 @@ export default function BreathingExercise() {
       <div style={{
         minHeight: '100vh',
         minHeight: '100dvh',
-        background: 'linear-gradient(135deg, #faf7f5 0%, #f5ebe4 100%)',
+        background: theme.bg,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         display: 'flex',
         flexDirection: 'column',
@@ -610,15 +648,15 @@ export default function BreathingExercise() {
             position: 'absolute',
             top: '16px',
             left: '16px',
-            background: 'white',
+            background: theme.cardBg,
             border: 'none',
             borderRadius: '10px',
             padding: '10px 16px',
             fontSize: '13px',
             fontWeight: '500',
-            color: '#7a7067',
+            color: theme.textSecondary,
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            boxShadow: `0 2px 8px ${theme.shadow}`
           }}
         >
           ← Back
@@ -627,18 +665,18 @@ export default function BreathingExercise() {
         {anxietyPhase === 'results' ? (
           // Results view
           <div style={{
-            background: 'white',
+            background: theme.cardBg,
             borderRadius: '24px',
             padding: '40px',
             width: '100%',
             maxWidth: '360px',
             textAlign: 'center',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)'
+            boxShadow: `0 4px 24px ${theme.shadow}`
           }}>
             <h3 style={{
               fontSize: '18px',
               fontWeight: '600',
-              color: '#3d3a38',
+              color: theme.text,
               margin: '0 0 24px',
               textTransform: 'uppercase',
               letterSpacing: '1px'
@@ -659,7 +697,7 @@ export default function BreathingExercise() {
               <div style={{
                 fontSize: '24px',
                 fontWeight: '600',
-                color: '#3d3a38',
+                color: theme.text,
                 marginTop: '4px'
               }}>
                 {Math.round(anxietyResults?.breathsPerMinute || 0)} breaths/min
@@ -686,8 +724,8 @@ export default function BreathingExercise() {
                 onClick={resetAnxietyMode}
                 style={{
                   flex: 1,
-                  background: 'white',
-                  border: '2px solid #e5e0d8',
+                  background: theme.cardBg,
+                  border: `2px solid ${theme.border}`,
                   borderRadius: '12px',
                   padding: '14px 20px',
                   fontSize: '14px',
@@ -723,7 +761,7 @@ export default function BreathingExercise() {
             <h2 style={{
               fontSize: '20px',
               fontWeight: '600',
-              color: '#3d3a38',
+              color: theme.text,
               margin: '0 0 6px',
               textAlign: 'center'
             }}>
@@ -731,7 +769,7 @@ export default function BreathingExercise() {
             </h2>
             <p style={{
               fontSize: '13px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 24px',
               textAlign: 'center',
               maxWidth: '280px',
@@ -801,7 +839,7 @@ export default function BreathingExercise() {
               {(anxietyPhase === 'intro' || anxietyBreathPhase === 'exhale') ? (
                 <p style={{
                   fontSize: '13px',
-                  color: '#7a7067',
+                  color: theme.textSecondary,
                   margin: '0',
                   fontStyle: 'italic'
                 }}>
@@ -812,7 +850,7 @@ export default function BreathingExercise() {
                   fontSize: '13px',
                   lineHeight: '1.8',
                   fontStyle: 'italic',
-                  color: '#7a7067'
+                  color: theme.textSecondary
                 }}>
                   <div>Breathe in</div>
                   <div>Hold breath in area of anxiety</div>
@@ -836,13 +874,13 @@ export default function BreathingExercise() {
                     finishAnxietyTracking();
                   }}
                   style={{
-                    background: 'white',
-                    border: '2px solid #e5e0d8',
+                    background: theme.cardBg,
+                    border: `2px solid ${theme.border}`,
                     borderRadius: '12px',
                     padding: '14px 32px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#7a7067',
+                    color: theme.textSecondary,
                     cursor: 'pointer'
                   }}
                 >
@@ -862,7 +900,9 @@ export default function BreathingExercise() {
       <div style={{
         minHeight: '100vh',
         minHeight: '100dvh',
-        background: 'linear-gradient(135deg, #f5f8fa 0%, #e8f0f5 100%)',
+        background: darkMode
+          ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+          : 'linear-gradient(135deg, #f5f8fa 0%, #e8f0f5 100%)',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         display: 'flex',
         flexDirection: 'column',
@@ -881,15 +921,15 @@ export default function BreathingExercise() {
             position: 'absolute',
             top: '16px',
             left: '16px',
-            background: 'white',
+            background: theme.cardBg,
             border: 'none',
             borderRadius: '10px',
             padding: '10px 16px',
             fontSize: '13px',
             fontWeight: '500',
-            color: '#7a7067',
+            color: theme.textSecondary,
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            boxShadow: `0 2px 8px ${theme.shadow}`
           }}
         >
           ← Back
@@ -900,12 +940,12 @@ export default function BreathingExercise() {
             position: 'absolute',
             top: '16px',
             right: '16px',
-            background: 'white',
+            background: theme.cardBg,
             borderRadius: '10px',
             padding: '10px 16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            boxShadow: `0 2px 8px ${theme.shadow}`
           }}>
-            <span style={{ color: '#7a7067', fontSize: '12px' }}>
+            <span style={{ color: theme.textSecondary, fontSize: '12px' }}>
               Round {wimHofRound} of {wimHofTotalRounds}
             </span>
           </div>
@@ -914,7 +954,7 @@ export default function BreathingExercise() {
         <h2 style={{
           fontSize: '20px',
           fontWeight: '600',
-          color: '#3d3a38',
+          color: theme.text,
           margin: '0 0 6px',
           textAlign: 'center'
         }}>
@@ -926,7 +966,7 @@ export default function BreathingExercise() {
           <>
             <p style={{
               fontSize: '14px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 24px',
               textAlign: 'center',
               maxWidth: '320px',
@@ -936,7 +976,7 @@ export default function BreathingExercise() {
             </p>
             <p style={{
               fontSize: '14px',
-              color: '#7a7067',
+              color: theme.textSecondary,
               margin: '0 0 16px',
               textAlign: 'center',
               fontWeight: '500'
@@ -956,15 +996,15 @@ export default function BreathingExercise() {
                   key={time}
                   onClick={() => setWimHofTargetHold(time)}
                   style={{
-                    background: wimHofTargetHold === time ? WIM_HOF_COLOR : 'white',
-                    color: wimHofTargetHold === time ? 'white' : '#3d3a38',
+                    background: wimHofTargetHold === time ? WIM_HOF_COLOR : theme.cardBg,
+                    color: wimHofTargetHold === time ? 'white' : theme.text,
                     border: 'none',
                     borderRadius: '12px',
                     padding: '16px 24px',
                     fontSize: '16px',
                     fontWeight: '500',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                    boxShadow: `0 2px 8px ${theme.shadow}`
                   }}
                 >
                   {time}s
@@ -982,15 +1022,15 @@ export default function BreathingExercise() {
                   key={rounds}
                   onClick={() => setWimHofTotalRounds(rounds)}
                   style={{
-                    background: wimHofTotalRounds === rounds ? WIM_HOF_COLOR : 'white',
-                    color: wimHofTotalRounds === rounds ? 'white' : '#3d3a38',
+                    background: wimHofTotalRounds === rounds ? WIM_HOF_COLOR : theme.cardBg,
+                    color: wimHofTotalRounds === rounds ? 'white' : theme.text,
                     border: 'none',
                     borderRadius: '12px',
                     padding: '12px 20px',
                     fontSize: '14px',
                     fontWeight: '500',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                    boxShadow: `0 2px 8px ${theme.shadow}`
                   }}
                 >
                   {rounds} rounds
@@ -1022,7 +1062,7 @@ export default function BreathingExercise() {
           <>
             <p style={{
               fontSize: '14px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
@@ -1064,7 +1104,7 @@ export default function BreathingExercise() {
             {/* Dynamic cue underneath */}
             <p style={{
               fontSize: '14px',
-              color: '#7a7067',
+              color: theme.textSecondary,
               margin: '0',
               textAlign: 'center',
               minHeight: '20px',
@@ -1086,7 +1126,7 @@ export default function BreathingExercise() {
           <>
             <p style={{
               fontSize: '14px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
@@ -1130,7 +1170,7 @@ export default function BreathingExercise() {
               </div>
             </div>
 
-            <p style={{ fontSize: '12px', color: '#a39a8f' }}>
+            <p style={{ fontSize: '12px', color: theme.textMuted }}>
               Target: {wimHofTargetHold}s
             </p>
           </>
@@ -1141,7 +1181,7 @@ export default function BreathingExercise() {
           <>
             <p style={{
               fontSize: '14px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
@@ -1188,7 +1228,7 @@ export default function BreathingExercise() {
           <>
             <p style={{
               fontSize: '14px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 24px',
               textAlign: 'center'
             }}>
@@ -1269,7 +1309,7 @@ export default function BreathingExercise() {
           <>
             <p style={{
               fontSize: '14px',
-              color: '#a39a8f',
+              color: theme.textMuted,
               margin: '0 0 32px',
               textAlign: 'center'
             }}>
@@ -1277,11 +1317,11 @@ export default function BreathingExercise() {
             </p>
 
             <div style={{
-              background: 'white',
+              background: theme.cardBg,
               borderRadius: '16px',
               padding: '32px 48px',
               marginBottom: '32px',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+              boxShadow: `0 2px 12px ${theme.shadow}`,
               minWidth: '280px'
             }}>
               {wimHofResults.map((time, i) => (
@@ -1290,10 +1330,10 @@ export default function BreathingExercise() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '20px 0',
-                  borderBottom: i < wimHofResults.length - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: i < wimHofResults.length - 1 ? `1px solid ${theme.border}` : 'none'
                 }}>
-                  <span style={{ color: '#7a7067', fontSize: '16px' }}>Round {i + 1}</span>
-                  <span style={{ fontWeight: '600', color: '#3d3a38', fontSize: '20px' }}>
+                  <span style={{ color: theme.textSecondary, fontSize: '16px' }}>Round {i + 1}</span>
+                  <span style={{ fontWeight: '600', color: theme.text, fontSize: '20px' }}>
                     {time}s
                   </span>
                 </div>
@@ -1328,7 +1368,7 @@ export default function BreathingExercise() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #faf7f5 0%, #f5ebe4 100%)',
+        background: theme.bg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1336,13 +1376,13 @@ export default function BreathingExercise() {
         padding: '20px'
       }}>
         <div style={{
-          background: 'white',
+          background: theme.cardBg,
           borderRadius: '24px',
           padding: '48px',
           maxWidth: '400px',
           width: '100%',
           textAlign: 'center',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+          boxShadow: `0 4px 24px ${theme.shadow}`
         }}>
           <div style={{
             width: '80px',
@@ -1353,7 +1393,8 @@ export default function BreathingExercise() {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 24px',
-            fontSize: '36px'
+            fontSize: '36px',
+            color: 'white'
           }}>
             ✓
           </div>
@@ -1361,7 +1402,7 @@ export default function BreathingExercise() {
           <h2 style={{
             fontSize: '24px',
             fontWeight: '600',
-            color: '#3d3a38',
+            color: theme.text,
             margin: '0 0 8px'
           }}>
             Well done
@@ -1369,7 +1410,7 @@ export default function BreathingExercise() {
 
           <p style={{
             fontSize: '16px',
-            color: '#7a7067',
+            color: theme.textSecondary,
             margin: '0 0 16px'
           }}>
             You completed your breathing session
@@ -1395,16 +1436,16 @@ export default function BreathingExercise() {
             marginBottom: '32px'
           }}>
             <div>
-              <div style={{ fontSize: '28px', fontWeight: '600', color: '#3d3a38' }}>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: theme.text }}>
                 {formatTime(totalSeconds)}
               </div>
-              <div style={{ fontSize: '14px', color: '#a39a8f' }}>Duration</div>
+              <div style={{ fontSize: '14px', color: theme.textMuted }}>Duration</div>
             </div>
             <div>
-              <div style={{ fontSize: '28px', fontWeight: '600', color: '#3d3a38' }}>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: theme.text }}>
                 {cycleCount}
               </div>
-              <div style={{ fontSize: '14px', color: '#a39a8f' }}>Cycles</div>
+              <div style={{ fontSize: '14px', color: theme.textMuted }}>Cycles</div>
             </div>
           </div>
 
@@ -1437,19 +1478,60 @@ export default function BreathingExercise() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #faf7f5 0%, #f5ebe4 100%)',
+        background: theme.bg,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         padding: '24px 16px',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        position: 'relative'
       }}>
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: theme.cardBg,
+            border: 'none',
+            borderRadius: '10px',
+            padding: '10px 14px',
+            cursor: 'pointer',
+            boxShadow: `0 2px 8px ${theme.shadow}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={darkMode ? '#e8e8e8' : '#7a7067'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {darkMode ? (
+              // Sun icon for switching to light mode
+              <>
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </>
+            ) : (
+              // Moon icon for switching to dark mode
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            )}
+          </svg>
+        </button>
+
         <div style={{ maxWidth: '400px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
-              <BreatheLogo size={160} />
+              <BreatheLogo size={160} darkMode={darkMode} />
             </div>
             <p style={{
               fontSize: '16px',
-              color: '#7a7067',
+              color: theme.textSecondary,
               margin: 0
             }}>
               Choose a breathing technique
@@ -1460,18 +1542,18 @@ export default function BreathingExercise() {
             display: 'grid',
             gap: '12px'
           }}>
-            {/* 1. Physiological Sigh */}
+            {/* 1. Quick Calm (Physiological Sigh) */}
             <button
               onClick={() => setSelectedTechnique('sigh')}
               className="technique-card"
               style={{
-                background: 'white',
+                background: theme.cardBg,
                 border: 'none',
                 borderRadius: '16px',
                 padding: '20px',
                 textAlign: 'left',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                boxShadow: `0 2px 12px ${theme.shadow}`,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -1479,18 +1561,18 @@ export default function BreathingExercise() {
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = `0 4px 20px ${darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}`;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+                e.currentTarget.style.boxShadow = `0 2px 12px ${theme.shadow}`;
               }}
             >
               <div className="card-icon" style={{
                 width: '56px',
                 height: '56px',
                 borderRadius: '14px',
-                background: `${breathingTechniques.sigh.color}15`,
+                background: `${breathingTechniques.sigh.color}${darkMode ? '30' : '15'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1505,22 +1587,22 @@ export default function BreathingExercise() {
                 }} />
               </div>
               <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38', margin: '0 0 2px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, margin: '0 0 2px' }}>
                   {breathingTechniques.sigh.name}
                 </h3>
-                <p style={{ fontSize: '13px', color: '#a39a8f', margin: '0 0 6px' }}>
+                <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 6px' }}>
                   {breathingTechniques.sigh.description}
                 </p>
                 <div className="phase-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     Double Inhale
                   </span>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     Long Exhale
                   </span>
                 </div>
               </div>
-              <div className="card-arrow" style={{ color: '#c9c0b5', fontSize: '18px' }}>→</div>
+              <div className="card-arrow" style={{ color: darkMode ? '#606070' : '#c9c0b5', fontSize: '18px' }}>→</div>
             </button>
 
             {/* 2. Anxiety Release */}
@@ -1528,13 +1610,13 @@ export default function BreathingExercise() {
               onClick={startAnxietyMode}
               className="technique-card"
               style={{
-                background: 'white',
+                background: theme.cardBg,
                 border: 'none',
                 borderRadius: '16px',
                 padding: '20px',
                 textAlign: 'left',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                boxShadow: `0 2px 12px ${theme.shadow}`,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -1542,33 +1624,33 @@ export default function BreathingExercise() {
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = `0 4px 20px ${darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}`;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+                e.currentTarget.style.boxShadow = `0 2px 12px ${theme.shadow}`;
               }}
             >
               <div className="card-icon" style={{
                 width: '56px',
                 height: '56px',
                 borderRadius: '14px',
-                background: '#B8860B15',
+                background: `#B8860B${darkMode ? '30' : '15'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#B8860B', opacity: 0.8 }} />
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#B8860B', opacity: 0.8 }} />
               </div>
               <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38', margin: '0 0 2px' }}>Anxiety Release</h3>
-                <p style={{ fontSize: '13px', color: '#a39a8f', margin: '0 0 6px' }}>Breathe into tension at your own pace</p>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, margin: '0 0 2px' }}>Anxiety Release</h3>
+                <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 6px' }}>Breathe into tension</p>
                 <div className="phase-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>Self-Paced</span>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>Self-Paced</span>
                 </div>
               </div>
-              <div className="card-arrow" style={{ color: '#c9c0b5', fontSize: '18px' }}>→</div>
+              <div className="card-arrow" style={{ color: darkMode ? '#606070' : '#c9c0b5', fontSize: '18px' }}>→</div>
             </button>
 
             {/* 3. Balanced Breathing */}
@@ -1576,13 +1658,13 @@ export default function BreathingExercise() {
               onClick={() => setSelectedTechnique('balanced')}
               className="technique-card"
               style={{
-                background: 'white',
+                background: theme.cardBg,
                 border: 'none',
                 borderRadius: '16px',
                 padding: '20px',
                 textAlign: 'left',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                boxShadow: `0 2px 12px ${theme.shadow}`,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -1590,18 +1672,18 @@ export default function BreathingExercise() {
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = `0 4px 20px ${darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}`;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+                e.currentTarget.style.boxShadow = `0 2px 12px ${theme.shadow}`;
               }}
             >
               <div className="card-icon" style={{
                 width: '56px',
                 height: '56px',
                 borderRadius: '14px',
-                background: `${breathingTechniques.balanced.color}15`,
+                background: `${breathingTechniques.balanced.color}${darkMode ? '30' : '15'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1616,22 +1698,22 @@ export default function BreathingExercise() {
                 }} />
               </div>
               <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38', margin: '0 0 2px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, margin: '0 0 2px' }}>
                   {breathingTechniques.balanced.name}
                 </h3>
-                <p style={{ fontSize: '13px', color: '#a39a8f', margin: '0 0 6px' }}>
+                <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 6px' }}>
                   {breathingTechniques.balanced.description}
                 </p>
                 <div className="phase-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     Inhale 4s
                   </span>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     Exhale 4s
                   </span>
                 </div>
               </div>
-              <div className="card-arrow" style={{ color: '#c9c0b5', fontSize: '18px' }}>→</div>
+              <div className="card-arrow" style={{ color: darkMode ? '#606070' : '#c9c0b5', fontSize: '18px' }}>→</div>
             </button>
 
             {/* 4. Sleep & Calm (4-7-8) */}
@@ -1639,13 +1721,13 @@ export default function BreathingExercise() {
               onClick={() => setSelectedTechnique('relaxing')}
               className="technique-card"
               style={{
-                background: 'white',
+                background: theme.cardBg,
                 border: 'none',
                 borderRadius: '16px',
                 padding: '20px',
                 textAlign: 'left',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                boxShadow: `0 2px 12px ${theme.shadow}`,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -1653,18 +1735,18 @@ export default function BreathingExercise() {
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = `0 4px 20px ${darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}`;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+                e.currentTarget.style.boxShadow = `0 2px 12px ${theme.shadow}`;
               }}
             >
               <div className="card-icon" style={{
                 width: '56px',
                 height: '56px',
                 borderRadius: '14px',
-                background: `${breathingTechniques.relaxing.color}15`,
+                background: `${breathingTechniques.relaxing.color}${darkMode ? '30' : '15'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1679,39 +1761,39 @@ export default function BreathingExercise() {
                 }} />
               </div>
               <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38', margin: '0 0 2px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, margin: '0 0 2px' }}>
                   {breathingTechniques.relaxing.name}
                 </h3>
-                <p style={{ fontSize: '13px', color: '#a39a8f', margin: '0 0 6px' }}>
+                <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 6px' }}>
                   {breathingTechniques.relaxing.description}
                 </p>
                 <div className="phase-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     In 4
                   </span>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     Hold 7
                   </span>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>
                     Out 8
                   </span>
                 </div>
               </div>
-              <div className="card-arrow" style={{ color: '#c9c0b5', fontSize: '18px' }}>→</div>
+              <div className="card-arrow" style={{ color: darkMode ? '#606070' : '#c9c0b5', fontSize: '18px' }}>→</div>
             </button>
 
-            {/* 5. Wim Hof Method */}
+            {/* 5. Energise (Wim Hof Method) */}
             <button
               onClick={startWimHofMode}
               className="technique-card"
               style={{
-                background: 'white',
+                background: theme.cardBg,
                 border: 'none',
                 borderRadius: '16px',
                 padding: '20px',
                 textAlign: 'left',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                boxShadow: `0 2px 12px ${theme.shadow}`,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -1719,34 +1801,34 @@ export default function BreathingExercise() {
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = `0 4px 20px ${darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}`;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+                e.currentTarget.style.boxShadow = `0 2px 12px ${theme.shadow}`;
               }}
             >
               <div className="card-icon" style={{
                 width: '56px',
                 height: '56px',
                 borderRadius: '14px',
-                background: `${WIM_HOF_COLOR}15`,
+                background: `${WIM_HOF_COLOR}${darkMode ? '30' : '15'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: WIM_HOF_COLOR, opacity: 0.8 }} />
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: WIM_HOF_COLOR, opacity: 0.8 }} />
               </div>
               <div className="card-content" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38', margin: '0 0 2px' }}>Energise</h3>
-                <p style={{ fontSize: '13px', color: '#a39a8f', margin: '0 0 6px' }}>Wim Hof Method</p>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, margin: '0 0 2px' }}>Energise</h3>
+                <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 6px' }}>Wim Hof Method</p>
                 <div className="phase-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>30 Breaths</span>
-                  <span style={{ fontSize: '11px', color: '#7a7067', background: '#f5efe8', padding: '3px 8px', borderRadius: '6px' }}>Hold</span>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>30 Breaths</span>
+                  <span style={{ fontSize: '11px', color: theme.tagText, background: theme.tagBg, padding: '3px 8px', borderRadius: '6px' }}>Hold</span>
                 </div>
               </div>
-              <div className="card-arrow" style={{ color: '#c9c0b5', fontSize: '18px' }}>→</div>
+              <div className="card-arrow" style={{ color: darkMode ? '#606070' : '#c9c0b5', fontSize: '18px' }}>→</div>
             </button>
           </div>
         </div>
@@ -1759,7 +1841,9 @@ export default function BreathingExercise() {
     <div style={{
       minHeight: '100vh',
       minHeight: '100dvh',
-      background: `linear-gradient(135deg, ${technique.color}15 0%, ${technique.color}08 100%)`,
+      background: darkMode
+        ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+        : `linear-gradient(135deg, ${technique.color}15 0%, ${technique.color}08 100%)`,
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       display: 'flex',
       flexDirection: 'column',
@@ -1778,15 +1862,15 @@ export default function BreathingExercise() {
           position: 'absolute',
           top: '16px',
           left: '16px',
-          background: 'white',
+          background: theme.cardBg,
           border: 'none',
           borderRadius: '10px',
           padding: '10px 16px',
           fontSize: '13px',
           fontWeight: '500',
-          color: '#7a7067',
+          color: theme.textSecondary,
           cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          boxShadow: `0 2px 8px ${theme.shadow}`,
           display: 'flex',
           alignItems: 'center',
           gap: '6px'
@@ -1800,24 +1884,24 @@ export default function BreathingExercise() {
         position: 'absolute',
         top: '16px',
         right: '16px',
-        background: 'white',
+        background: theme.cardBg,
         borderRadius: '10px',
         padding: '10px 16px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        boxShadow: `0 2px 8px ${theme.shadow}`,
         display: 'flex',
         gap: '16px'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38' }}>
+          <div style={{ fontSize: '16px', fontWeight: '600', color: theme.text }}>
             {formatTime(totalSeconds)}
           </div>
-          <div style={{ fontSize: '10px', color: '#a39a8f' }}>Time</div>
+          <div style={{ fontSize: '10px', color: theme.textMuted }}>Time</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '16px', fontWeight: '600', color: '#3d3a38' }}>
+          <div style={{ fontSize: '16px', fontWeight: '600', color: theme.text }}>
             {cycleCount}
           </div>
-          <div style={{ fontSize: '10px', color: '#a39a8f' }}>Cycles</div>
+          <div style={{ fontSize: '10px', color: theme.textMuted }}>Cycles</div>
         </div>
       </div>
 
@@ -1829,15 +1913,15 @@ export default function BreathingExercise() {
         <h2 style={{
           fontSize: '20px',
           fontWeight: '600',
-          color: '#3d3a38',
+          color: theme.text,
           margin: 0
         }}>
-          {technique.name}
+          {technique.displayName || technique.name}
         </h2>
         {technique.cue && (
           <p style={{
             fontSize: '12px',
-            color: '#a39a8f',
+            color: theme.textMuted,
             margin: '6px 0 0',
             fontStyle: 'italic',
             maxWidth: '280px'
@@ -1888,13 +1972,15 @@ export default function BreathingExercise() {
             textAlign: 'center',
             color: 'white'
           }}>
-            <div style={{
-              fontSize: '28px',
-              fontWeight: '600',
-              marginBottom: '4px'
-            }}>
-              {isActive ? (isPaused ? 'Paused' : currentPhase?.name) : 'Ready'}
-            </div>
+            {(isActive || isPaused) && currentPhase?.name !== 'Pause' && (
+              <div style={{
+                fontSize: '28px',
+                fontWeight: '600',
+                marginBottom: '4px'
+              }}>
+                {isPaused ? 'Paused' : currentPhase?.name}
+              </div>
+            )}
             {isActive && !isPaused && (
               <>
                 {/* For Quick Calm (sigh): only show countdown on exhale */}
@@ -1949,7 +2035,7 @@ export default function BreathingExercise() {
         </div>
       </div>
 
-      {/* Phase Indicators */}
+      {/* Phase Indicators - filter out Pause (it's behind the scenes) */}
       <div style={{
         display: 'flex',
         gap: '8px',
@@ -1957,28 +2043,78 @@ export default function BreathingExercise() {
         flexWrap: 'wrap',
         justifyContent: 'center'
       }}>
-        {technique.phases.map((phase, i) => (
-          <div
-            key={i}
+        {technique.phases.filter(p => p.name !== 'Pause').map((phase, i) => {
+          // Find the actual index in the original phases array for highlighting
+          const actualIndex = technique.phases.findIndex(p => p.name === phase.name);
+          return (
+            <div
+              key={i}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '16px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: currentPhaseIndex === actualIndex && isActive && !isPaused
+                  ? technique.color
+                  : theme.cardBg,
+                color: currentPhaseIndex === actualIndex && isActive && !isPaused
+                  ? 'white'
+                  : theme.textSecondary,
+                boxShadow: `0 2px 8px ${theme.shadow}`,
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {phase.name}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Quick Calm Mode Selector */}
+      {selectedTechnique === 'sigh' && !isActive && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '16px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          <span style={{ fontSize: '12px', color: theme.textSecondary }}>Mode:</span>
+          <button
+            onClick={() => setSighMode('cycles')}
             style={{
-              padding: '6px 12px',
-              borderRadius: '16px',
+              background: sighMode === 'cycles' ? technique.color : theme.cardBg,
+              color: sighMode === 'cycles' ? 'white' : theme.text,
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 12px',
               fontSize: '12px',
               fontWeight: '500',
-              background: currentPhaseIndex === i && isActive && !isPaused
-                ? technique.color
-                : 'white',
-              color: currentPhaseIndex === i && isActive && !isPaused
-                ? 'white'
-                : '#6b7280',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-              transition: 'all 0.3s ease'
+              cursor: 'pointer',
+              boxShadow: `0 2px 8px ${theme.shadow}`
             }}
           >
-            {phase.name}
-          </div>
-        ))}
-      </div>
+            3 cycles
+          </button>
+          <button
+            onClick={() => setSighMode('timer')}
+            style={{
+              background: sighMode === 'timer' ? technique.color : theme.cardBg,
+              color: sighMode === 'timer' ? 'white' : theme.text,
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 12px',
+              fontSize: '12px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              boxShadow: `0 2px 8px ${theme.shadow}`
+            }}
+          >
+            5 min practice
+          </button>
+        </div>
+      )}
 
       {/* 4-7-8 Cycle Selector */}
       {selectedTechnique === 'relaxing' && !isActive && (
@@ -1990,21 +2126,21 @@ export default function BreathingExercise() {
           flexWrap: 'wrap',
           justifyContent: 'center'
         }}>
-          <span style={{ fontSize: '12px', color: '#7a7067' }}>Cycles:</span>
+          <span style={{ fontSize: '12px', color: theme.textSecondary }}>Cycles:</span>
           {[4, 8].map((cycles) => (
             <button
               key={cycles}
               onClick={() => setRelaxingTargetCycles(cycles)}
               style={{
-                background: relaxingTargetCycles === cycles ? technique.color : 'white',
-                color: relaxingTargetCycles === cycles ? 'white' : '#3d3a38',
+                background: relaxingTargetCycles === cycles ? technique.color : theme.cardBg,
+                color: relaxingTargetCycles === cycles ? 'white' : theme.text,
                 border: 'none',
                 borderRadius: '10px',
                 padding: '8px 12px',
                 fontSize: '12px',
                 fontWeight: '500',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                boxShadow: `0 2px 8px ${theme.shadow}`
               }}
             >
               {cycles} {cycles === 4 ? '(beginner)' : '(advanced)'}
@@ -2043,15 +2179,15 @@ export default function BreathingExercise() {
             <button
               onClick={isPaused ? resumeExercise : pauseExercise}
               style={{
-                background: 'white',
-                color: '#3d3a38',
+                background: theme.cardBg,
+                color: theme.text,
                 border: 'none',
                 borderRadius: '14px',
                 padding: '14px 24px',
                 fontSize: '14px',
                 fontWeight: '500',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+                boxShadow: `0 2px 12px ${theme.shadow}`
               }}
             >
               {isPaused ? 'Resume' : 'Pause'}
